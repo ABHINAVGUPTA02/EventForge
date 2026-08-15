@@ -20,7 +20,7 @@ func NewInMemoryBus() *InMemoryBus {
 	}
 }
 
-func (b *InMemoryBus) subscribe(ctx context.Context) (<-chan event.Event, error) {
+func (b *InMemoryBus) Subscribe(ctx context.Context) (<-chan event.Event, error) {
 	ch := make(chan event.Event, subscriberBufferSize)
 
 	b.mu.Lock()
@@ -30,11 +30,11 @@ func (b *InMemoryBus) subscribe(ctx context.Context) (<-chan event.Event, error)
 	return ch, nil
 }
 
-func (b *InMemoryBus) publish(ctx context.Context, evnt event.Event) error {
+func (b *InMemoryBus) Publish(ctx context.Context, evnt event.Event) error {
 	b.mu.RLock()
 	subscribers := make([]chan event.Event, len(b.subscribers))
 	copy(subscribers, b.subscribers)
-	b.mu.RLock()
+	b.mu.RUnlock()
 
 	for _, ch := range subscribers {
 		select {

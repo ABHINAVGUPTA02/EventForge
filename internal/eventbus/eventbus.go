@@ -7,6 +7,6 @@ import (
 )
 
 type EventBus interface {
-	publish(ctx context.Context, event event.Event) error
-	subscribe(ctx context.Context) (<-chan event.Event, error)
+	Publish(ctx context.Context, event event.Event) error
+	Subscribe(ctx context.Context) (<-chan event.Event, error)
 }

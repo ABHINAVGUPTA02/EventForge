@@ -19,7 +19,7 @@ func NewRouter() *Router {
 
 func (r *Router) Subscribe(sub Subscription) {
 	r.mu.Lock()
-	defer r.mu.RUnlock()
+	defer r.mu.Unlock()
 
 	r.subscriptions[sub.ID] = sub
 }

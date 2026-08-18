@@ -5,15 +5,19 @@ import (
 	"time"
 
 	"github.com/ABHINAVGUPTA02/EventForge/internal/event"
+	"github.com/ABHINAVGUPTA02/EventForge/internal/subscription"
 )
 
 func TestRouterSubscribeAndMatching(t *testing.T) {
 	r := NewRouter()
 
-	sub := Subscription{
-		ID:         "001",
-		TenantID:   "T-001",
-		EventTypes: []string{"ORDER_CREATED"},
+	sub := subscription.Subscription{
+		ID:             "001",
+		TenantID:       "T-001",
+		EventTypes:     []string{"ORDER_CREATED"},
+		Endpoint:       "https://test-endpoint.com",
+		MaxConcurrency: 1,
+		RateLimit:      1,
 	}
 
 	r.Subscribe(sub)

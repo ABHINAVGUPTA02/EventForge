@@ -14,6 +14,6 @@ type Delivery struct {
 	ID             string
 	EventID        string
 	SubscriptionID string
-	Status         string
+	Status         Status
 	Attempt        int
 }

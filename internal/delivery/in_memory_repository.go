@@ -39,3 +39,11 @@ func (r *InMemoryRepository) Update(
 
 	return nil
 }
+
+func (r *InMemoryRepository) Get(id string) (Delivery, bool) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	delivery, ok := r.deliveries[id]
+	return delivery, ok
+}

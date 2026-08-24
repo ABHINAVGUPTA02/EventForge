@@ -1,45 +1,56 @@
-package dispatcher
+package dispatcher_test
 
 import (
 	"context"
-	"sync"
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"github.com/ABHINAVGUPTA02/EventForge/internal/delivery"
+	"github.com/ABHINAVGUPTA02/EventForge/internal/dispatcher"
 	"github.com/ABHINAVGUPTA02/EventForge/internal/event"
 	"github.com/ABHINAVGUPTA02/EventForge/internal/router"
 	"github.com/ABHINAVGUPTA02/EventForge/internal/subscription"
 )
 
-type fakeDeliverer struct {
-	mu    sync.Mutex
-	calls int
-}
+func TestDispatcherDeliversEventEndToEnd(t *testing.T) {
+	var receivedEvent event.Event
 
-func (d *fakeDeliverer) Deliver(
-	ctx context.Context,
-	evt event.Event,
-	sub subscription.Subscription,
-) error {
-	d.mu.Lock()
-	d.calls++
-	d.mu.Unlock()
+	server := httptest.NewServer(
+		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.Method != http.MethodPost {
+				t.Errorf(
+					"expected POST, got %s",
+					r.Method,
+				)
+			}
 
-	return nil
-}
+			if r.Header.Get("Content-Type") != "application/json" {
+				t.Errorf(
+					"expected application/json, got %s",
+					r.Header.Get("Content-Type"),
+				)
+			}
 
-func (d *fakeDeliverer) Calls() int {
-	d.mu.Lock()
-	defer d.mu.Unlock()
+			if err := json.NewDecoder(r.Body).Decode(&receivedEvent); err != nil {
+				t.Fatalf(
+					"failed to decode event: %v",
+					err,
+				)
+			}
 
-	return d.calls
-}
+			w.WriteHeader(http.StatusOK)
+		}),
+	)
 
-func TestDispatcherDeliversEvent(t *testing.T) {
-	ctx := context.Background()
+	defer server.Close()
 
-	deliverer := &fakeDeliverer{}
 	repo := delivery.NewInMemoryRepository()
+
+	httpClient := server.Client()
+
+	deliverer := delivery.NewHTTPDeliverer(httpClient)
 
 	manager := delivery.NewManager(
 		deliverer,
@@ -50,7 +61,7 @@ func TestDispatcherDeliversEvent(t *testing.T) {
 
 	r := router.NewRouter()
 
-	d := NewDispatcher(
+	d := dispatcher.NewDispatcher(
 		r,
 		manager,
 	)
@@ -61,8 +72,10 @@ func TestDispatcherDeliversEvent(t *testing.T) {
 		EventTypes: []string{
 			"ORDER_CREATED",
 		},
-		Endpoint: "http://example.com",
+		Endpoint: server.URL,
 	})
+
+	ctx := context.Background()
 
 	manager.Start(ctx)
 
@@ -76,12 +89,25 @@ func TestDispatcherDeliversEvent(t *testing.T) {
 	)
 
 	if err != nil {
-		t.Fatalf("dispatch failed: %v", err)
+		t.Fatalf(
+			"dispatch failed: %v",
+			err,
+		)
 	}
 
 	manager.Stop()
 
-	if got := deliverer.Calls(); got != 1 {
-		t.Fatalf("expected 1 delivery, got %d", got)
+	if receivedEvent.ID != "evt-001" {
+		t.Errorf(
+			"expected event ID evt-001, got %s",
+			receivedEvent.ID,
+		)
+	}
+
+	if receivedEvent.Type != "ORDER_CREATED" {
+		t.Errorf(
+			"expected event type ORDER_CREATED, got %s",
+			receivedEvent.Type,
+		)
 	}
 }

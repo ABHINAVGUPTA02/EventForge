@@ -1,7 +1,10 @@
 package delivery
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"github.com/ABHINAVGUPTA02/EventForge/internal/event"
@@ -23,6 +26,36 @@ func (d *HTTPDeliverer) Deliver(
 	evt event.Event,
 	sub subscription.Subscription,
 ) error {
-	// implementation coming next
+	body, err := json.Marshal(evt)
+	if err != nil {
+		return err
+	}
+
+	req, err := http.NewRequestWithContext(
+		ctx,
+		http.MethodPost,
+		sub.Endpoint,
+		bytes.NewReader(body),
+	)
+	if err != nil {
+		return err
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := d.client.Do(req)
+	if err != nil {
+		return err
+	}
+
+	defer resp.Body.Close()
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return fmt.Errorf(
+			"delivery failed with status code %d",
+			resp.StatusCode,
+		)
+	}
+
 	return nil
 }

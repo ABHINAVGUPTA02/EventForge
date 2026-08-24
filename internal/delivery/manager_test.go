@@ -37,9 +37,11 @@ func TestManagerProcessesTasks(t *testing.T) {
 	ctx := context.Background()
 
 	deliverer := &fakeDeliverer{}
+	repo := NewInMemoryRepository()
 
 	manager := NewManager(
 		deliverer,
+		repo,
 		3,
 		10,
 	)
